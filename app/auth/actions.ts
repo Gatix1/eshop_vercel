@@ -10,8 +10,8 @@ function formValue(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
-function callbackUrl(path: string) {
-  return `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}${path}`;
+async function callbackUrl(path: string) {
+  return `${await authOrigin()}${path}`;
 }
 
 export async function signUp(_state: AuthResult, formData: FormData): Promise<AuthResult> {
@@ -26,7 +26,7 @@ export async function signUp(_state: AuthResult, formData: FormData): Promise<Au
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName }, emailRedirectTo: callbackUrl("/auth/callback?next=/account") },
+    options: { data: { full_name: fullName }, emailRedirectTo: await callbackUrl("/auth/callback?next=/account") },
   });
 
   if (error) return { error: error.message };
@@ -49,7 +49,7 @@ export async function requestPasswordReset(_state: AuthResult, formData: FormDat
   const email = formValue(formData, "email").toLowerCase();
   if (!email) return { error: "Enter your account email." };
   const supabase = await createClient();
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: callbackUrl("/auth/callback?next=/auth/update-password") });
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: await callbackUrl("/auth/callback?next=/auth/update-password") });
   if (error) return { error: error.message };
   return { success: "If an account exists, a password reset link is on its way." };
 }
