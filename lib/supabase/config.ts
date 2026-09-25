@@ -1,5 +1,5 @@
 export function getSupabaseConfig() {
-  const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/+$/, "");
+  const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
 
   if (!configuredUrl || !anonKey) {
@@ -8,18 +8,13 @@ export function getSupabaseConfig() {
 
   try {
     const parsedUrl = new URL(configuredUrl);
-    if (parsedUrl.protocol !== "https:") {
+    if (parsedUrl.protocol !== "https:" && parsedUrl.hostname !== "localhost") {
       throw new Error("NEXT_PUBLIC_SUPABASE_URL must be the Supabase project URL, for example https://your-project-ref.supabase.co");
     }
 
-    // Supabase also displays a REST endpoint ending in /rest/v1. Auth needs
-    // the project root because it appends /auth/v1 to this URL.
-    if (parsedUrl.pathname === "/rest/v1") parsedUrl.pathname = "";
-    if (parsedUrl.pathname !== "") {
-      throw new Error("NEXT_PUBLIC_SUPABASE_URL must be the Supabase project URL, for example https://your-project-ref.supabase.co");
-    }
-
-    return { url: parsedUrl.toString().replace(/\/$/, ""), anonKey };
+    // Auth and database clients append their own API paths. Ignore any path
+    // copied from the Supabase REST settings and use only the project origin.
+    return { url: parsedUrl.origin, anonKey };
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("NEXT_PUBLIC_SUPABASE_URL")) throw error;
     throw new Error("NEXT_PUBLIC_SUPABASE_URL must be a valid HTTPS Supabase project URL, for example https://your-project-ref.supabase.co");
