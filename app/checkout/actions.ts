@@ -1,7 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createPaypalOrder, paypalAmount } from "@/lib/paypal";
 
 export type CheckoutResult = { error?: string };
 
@@ -29,6 +32,36 @@ export async function createPendingOrder(_state: CheckoutResult, formData: FormD
   if (!shipping.full_name || !shipping.phone || !shipping.address || !shipping.city) return { error: "Name, phone, address, and city are required." };
 
   const { data: orderId, error } = await supabase.rpc("create_pending_order", { order_items_input: items, shipping_input: shipping });
-  if (error) return { error: error.message.includes("stock") ? error.message : "We could not create the order. Please check your cart and try again." };
-  redirect(`/checkout/success?order=${orderId}`);
+  if (error) {
+    console.error("Pending order creation failed", { code: error.code, message: error.message, details: error.details, hint: error.hint });
+    if (/stock|available|cart|quantity|profile/i.test(error.message)) {
+      if (/active customer profile/i.test(error.message)) return { error: "Your customer profile is not ready yet. Please sign out, sign in again, and retry checkout. If it still fails, ask the store administrator to run the profile repair migration." };
+      if (/profile is inactive/i.test(error.message)) return { error: "This customer account is inactive. Please contact the store for help." };
+      return { error: error.message };
+    }
+    if (error.code === "42883" || error.code === "PGRST202") return { error: "Checkout database setup is incomplete. Ask the store administrator to apply the latest orders migration." };
+    return { error: "We could not create the order. Please try again or contact support if the problem continues." };
+  }
+  const { data: order } = await supabase.from("orders").select("total").eq("id", orderId).single();
+  if (!order) return { error: "Order was created but its total could not be loaded. Contact support before retrying." };
+
+  let paypalOrder: Awaited<ReturnType<typeof createPaypalOrder>>;
+  try {
+    paypalAmount(Number(order.total));
+    const requestOrigin = (await headers()).get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+    paypalOrder = await createPaypalOrder({ orderId, totalMdl: Number(order.total), origin: requestOrigin });
+  } catch (paypalError) {
+    console.error("PayPal order creation failed", paypalError);
+    return { error: paypalError instanceof Error ? paypalError.message : "PayPal could not start this payment." };
+  }
+
+  const approvalUrl = paypalOrder.links?.find((link) => link.rel === "approve")?.href;
+  if (!approvalUrl) return { error: "PayPal did not provide an approval link. Please try again." };
+  const admin = createAdminClient();
+  const { error: saveError } = await admin.rpc("set_paypal_order", { target_order_id: orderId, provider_order_id: paypalOrder.id });
+  if (saveError) {
+    console.error("Could not save PayPal order ID", saveError);
+    return { error: "PayPal payment was started but the order could not be linked. Contact support before retrying." };
+  }
+  redirect(approvalUrl);
 }

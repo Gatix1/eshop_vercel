@@ -69,6 +69,31 @@ with check (exists (
   where orders.id = order_items.order_id and orders.customer_id = auth.uid()
 ));
 
+create or replace function public.owns_order(target_order_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.orders
+    where id = target_order_id and customer_id = auth.uid()
+  );
+$$;
+
+drop policy "Customers can view their own order items" on public.order_items;
+create policy "Customers can view their own order items"
+on public.order_items for select
+to authenticated
+using (public.owns_order(order_id));
+
+drop policy "Customers can add items to their own orders" on public.order_items;
+create policy "Customers can add items to their own orders"
+on public.order_items for insert
+to authenticated
+with check (public.owns_order(order_id));
+
 create or replace function public.create_pending_order(order_items_input jsonb, shipping_input jsonb)
 returns uuid
 language plpgsql
@@ -78,6 +103,7 @@ as $$
 declare
   current_user_id uuid := auth.uid();
   current_email text;
+  profile_active boolean;
   new_order_id uuid;
   item jsonb;
   product_row public.products%rowtype;
@@ -94,9 +120,12 @@ begin
     raise exception 'Authentication is required';
   end if;
 
-  select email into current_email from public.profiles where id = current_user_id and is_active = true;
+  select email, is_active into current_email, profile_active from public.profiles where id = current_user_id;
   if current_email is null then
     raise exception 'Active customer profile was not found';
+  end if;
+  if not profile_active then
+    raise exception 'Your customer profile is inactive';
   end if;
 
   if jsonb_typeof(order_items_input) <> 'array' or jsonb_array_length(order_items_input) = 0 then
