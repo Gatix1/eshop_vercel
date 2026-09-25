@@ -8,7 +8,12 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient();
-    await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      const errorUrl = new URL("/auth", url.origin);
+      errorUrl.searchParams.set("error", "Unable to confirm your email. Please try signing in again.");
+      return NextResponse.redirect(errorUrl);
+    }
   }
 
   return NextResponse.redirect(new URL(next.startsWith("/") ? next : "/account", url.origin));
