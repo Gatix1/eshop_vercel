@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
 import "./globals.css";
+import { CartProvider } from "@/components/cart-provider";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${manrope.variable} ${cormorant.variable}`}>{children}</body>
+      <body className={`${manrope.variable} ${cormorant.variable}`}><CartProvider>{children}</CartProvider></body>
     </html>
   );
 }
