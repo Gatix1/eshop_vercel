@@ -50,5 +50,22 @@ export async function createPaypalOrder({ orderId, totalMdl, origin }: { orderId
 }
 
 export async function capturePaypalOrder(paypalOrderId: string) {
-  return paypalRequest<{ id: string; status: string; purchase_units?: { payments?: { captures?: { id: string; status: string }[] } }[] }>(`/v2/checkout/orders/${encodeURIComponent(paypalOrderId)}/capture`, { method: "POST", headers: { Prefer: "return=representation" }, body: "{}" });
+  return paypalRequest<{
+    id: string;
+    status: string;
+    purchase_units?: {
+      reference_id?: string;
+      amount?: { currency_code?: string; value?: string };
+      payments?: { captures?: { id?: string; status?: string; amount?: { currency_code?: string; value?: string } }[] };
+    }[];
+  }>(`/v2/checkout/orders/${encodeURIComponent(paypalOrderId)}/capture`, { method: "POST", headers: { Prefer: "return=representation" }, body: "{}" });
+}
+
+export async function verifyPaypalWebhook({ transmissionId, transmissionTime, transmissionSig, certUrl, authAlgo, webhookEvent }: { transmissionId: string; transmissionTime: string; transmissionSig: string; certUrl: string; authAlgo: string; webhookEvent: unknown }) {
+  const webhookId = process.env.PAYPAL_WEBHOOK_ID?.trim();
+  if (!webhookId) throw new Error("PAYPAL_WEBHOOK_ID is not configured.");
+  return paypalRequest<{ verification_status: string }>("/v1/notifications/verify-webhook-signature", {
+    method: "POST",
+    body: JSON.stringify({ auth_algo: authAlgo, cert_url: certUrl, transmission_id: transmissionId, transmission_sig: transmissionSig, transmission_time: transmissionTime, webhook_id: webhookId, webhook_event: webhookEvent }),
+  });
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { capturePaypalOrder } from "@/lib/paypal";
+import { capturePaypalOrder, paypalAmount, paypalCurrency } from "@/lib/paypal";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, paypal_order_id, payment_status")
+    .select("id, paypal_order_id, payment_status, total")
     .eq("id", orderId)
     .eq("customer_id", user.id)
     .maybeSingle();
@@ -25,18 +25,22 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/account?payment=invalid", url.origin));
   }
   if (order.payment_status === "paid") {
-    return NextResponse.redirect(new URL(`/account?payment=complete&order=${orderId}`, url.origin));
+    return NextResponse.redirect(new URL(`/checkout/success?order=${orderId}`, url.origin));
   }
 
   try {
     const capture = await capturePaypalOrder(paypalOrderId);
     const captureInfo = capture.purchase_units?.flatMap((unit) => unit.payments?.captures ?? []).find((entry) => entry.status === "COMPLETED");
-    if (capture.status !== "COMPLETED" || !captureInfo) throw new Error("PayPal did not confirm a completed capture.");
+    const capturedAmount = captureInfo?.amount;
+    const expectedAmount = paypalAmount(Number(order.total));
+    if (capture.status !== "COMPLETED" || !captureInfo?.id || capturedAmount?.currency_code !== paypalCurrency() || capturedAmount.value !== expectedAmount) {
+      throw new Error("PayPal did not confirm a completed capture for the expected amount.");
+    }
 
     const admin = createAdminClient();
     const { error } = await admin.rpc("mark_order_paid", { target_order_id: orderId, capture_id: captureInfo.id });
     if (error) throw error;
-    return NextResponse.redirect(new URL(`/account?payment=complete&order=${orderId}`, url.origin));
+    return NextResponse.redirect(new URL(`/checkout/success?order=${orderId}`, url.origin));
   } catch (error) {
     console.error("PayPal capture failed", error);
     return NextResponse.redirect(new URL(`/account?payment=pending&order=${orderId}`, url.origin));
