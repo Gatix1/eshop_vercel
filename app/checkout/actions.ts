@@ -8,6 +8,30 @@ import { createPaypalOrder, paypalAmount } from "@/lib/paypal";
 
 export type CheckoutResult = { error?: string };
 
+export type CouponResult = {
+  valid: boolean;
+  code?: string | null;
+  discount?: number;
+  free_shipping?: boolean;
+  message?: string;
+};
+
+export async function validateCoupon(cart: string, couponCode: string): Promise<CouponResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { valid: false, message: "Please sign in before applying a coupon." };
+  let items: unknown;
+  try {
+    items = JSON.parse(cart);
+  } catch {
+    return { valid: false, message: "Your cart could not be read. Please refresh and try again." };
+  }
+  if (!Array.isArray(items) || !items.length) return { valid: false, message: "Your cart is empty." };
+  const { data, error } = await supabase.rpc("validate_coupon", { order_items_input: items, coupon_code_input: couponCode });
+  if (error) return { valid: false, message: "We could not validate that coupon. Please try again." };
+  return data as CouponResult;
+}
+
 export async function createPendingOrder(_state: CheckoutResult, formData: FormData): Promise<CheckoutResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -31,10 +55,11 @@ export async function createPendingOrder(_state: CheckoutResult, formData: FormD
   };
   if (!shipping.full_name || !shipping.phone || !shipping.address || !shipping.city) return { error: "Name, phone, address, and city are required." };
 
-  const { data: orderId, error } = await supabase.rpc("create_pending_order", { order_items_input: items, shipping_input: shipping });
+  const couponCode = String(formData.get("coupon_code") ?? "").trim();
+  const { data: orderId, error } = await supabase.rpc("create_pending_order", { order_items_input: items, shipping_input: shipping, coupon_code_input: couponCode || null });
   if (error) {
     console.error("Pending order creation failed", { code: error.code, message: error.message, details: error.details, hint: error.hint });
-    if (/stock|available|cart|quantity|profile/i.test(error.message)) {
+    if (/stock|available|cart|quantity|profile|coupon|order of|first orders|usage limit|does not apply/i.test(error.message)) {
       if (/active customer profile/i.test(error.message)) return { error: "Your customer profile is not ready yet. Please sign out, sign in again, and retry checkout. If it still fails, ask the store administrator to run the profile repair migration." };
       if (/profile is inactive/i.test(error.message)) return { error: "This customer account is inactive. Please contact the store for help." };
       return { error: error.message };
