@@ -10,7 +10,7 @@ export default async function AdminCouponsPage({ searchParams }: { searchParams:
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth?next=/admin/coupons");
   const { data: profile } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).single();
-  if (!profile?.is_active || !["owner", "admin"].includes(profile.role)) redirect("/account");
+  if (!profile?.is_active || !["owner", "admin"].includes(profile.role)) redirect("/admin");
   const admin = createAdminClient();
   const [{ data: coupons }, { data: products }, { data: categories }] = await Promise.all([
     admin.from("coupons").select("id, code, discount_type, discount_value, minimum_order_amount, usage_limit, per_customer_limit, first_order_only, free_shipping, is_active, expires_at, coupon_products(product_id), coupon_categories(category_id)").order("created_at", { ascending: false }),
