@@ -1,4 +1,5 @@
-import { ArrowUpRight, Headphones, Laptop, Menu, Mouse, Package, Search, ShoppingBag, Smartphone } from "lucide-react";
+import { ArrowUpRight, Headphones, Laptop, Mouse, Package, Smartphone } from "lucide-react";
+import { HomeHeader } from "@/components/home-header";
 
 const categories = [
   { name: "Computers", icon: Laptop, detail: "Built for flow" },
@@ -10,19 +11,7 @@ const categories = [
 export default function Home() {
   return (
     <main className="min-h-screen overflow-hidden">
-      <nav className="mx-auto flex max-w-[1400px] items-center justify-between px-5 py-6 sm:px-8 lg:px-12">
-        <a href="#top" className="font-serif text-3xl tracking-[-0.04em] text-white">e<span className="text-acid">.</span>Shop</a>
-        <div className="hidden items-center gap-8 text-xs uppercase tracking-[0.18em] text-mist md:flex">
-          <a href="#shop" className="transition hover:text-white">Shop</a>
-          <a href="#categories" className="transition hover:text-white">Categories</a>
-          <a href="#story" className="transition hover:text-white">About us</a>
-        </div>
-        <div className="flex items-center gap-2">
-          <button aria-label="Search" className="grid size-10 place-items-center rounded-full border border-white/10 text-mist transition hover:border-acid hover:text-acid"><Search size={17} strokeWidth={1.5} /></button>
-          <button aria-label="Shopping bag" className="grid size-10 place-items-center rounded-full border border-white/10 text-mist transition hover:border-acid hover:text-acid"><ShoppingBag size={17} strokeWidth={1.5} /></button>
-          <button aria-label="Open menu" className="grid size-10 place-items-center rounded-full border border-white/10 text-mist md:hidden"><Menu size={17} strokeWidth={1.5} /></button>
-        </div>
-      </nav>
+      <HomeHeader />
 
       <section id="top" className="relative mx-auto grid max-w-[1400px] items-end gap-12 px-5 pb-24 pt-16 sm:px-8 md:min-h-[620px] md:grid-cols-[1.05fr_0.95fr] md:px-12 md:pt-28">
         <div className="pointer-events-none absolute -left-24 top-8 size-96 rounded-full bg-acid/10 blur-[120px]" />
