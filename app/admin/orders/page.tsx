@@ -25,6 +25,7 @@ export default async function AdminOrdersPage() {
   const admin = createAdminClient();
   const { data: orders } = await admin.from("orders")
     .select("id, email_snapshot, total, payment_status, fulfillment_status, created_at")
+    .neq("payment_status", "pending")
     .order("created_at", { ascending: false });
 
   return <main className="min-h-screen px-5 py-8 sm:px-8 lg:px-12">

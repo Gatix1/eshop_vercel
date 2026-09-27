@@ -18,7 +18,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   if (!user) redirect("/auth?next=/account");
 
   const { data: profile } = await supabase.from("profiles").select("full_name, email, phone, role").eq("id", user.id).single();
-  const { data: orders } = await supabase.from("orders").select("id, total, payment_status, fulfillment_status, created_at, paypal_order_id").eq("customer_id", user.id).order("created_at", { ascending: false });
+  const { data: orders } = await supabase.from("orders").select("id, total, payment_status, fulfillment_status, created_at, paypal_order_id").eq("customer_id", user.id).neq("payment_status", "pending").order("created_at", { ascending: false });
   const paymentMessage = payment === "complete" ? "Payment confirmed. Your order is being prepared." : payment === "pending" ? "Payment is still pending. Check the order status before trying again." : payment === "cancelled" ? "Payment was cancelled. Your order remains pending." : payment === "invalid" ? "We could not verify that payment return." : null;
 
   return <main className="min-h-screen px-5 py-8 sm:px-8 lg:px-12">
