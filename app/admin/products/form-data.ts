@@ -3,7 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { EditableProduct } from "@/app/admin/products/product-editor";
 
-export async function loadProductForm(id: string | undefined, searchParams: Promise<{ error?: string; saved?: string }>) {
+export type EditableVariant = { id: string; name: string; attributes: Record<string, string>; sku: string; price: number; stock_quantity: number; is_active: boolean };
+
+export async function loadProductForm(id: string | undefined, searchParams: Promise<{ error?: string; saved?: string; variant_error?: string; variant_saved?: string }>) {
   const query = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -16,5 +18,6 @@ export async function loadProductForm(id: string | undefined, searchParams: Prom
     id ? admin.from("products").select("id, name, slug, brand, model, sku, category_id, description, base_price, stock_quantity, warranty_information, main_image, is_featured").eq("id", id).maybeSingle() : Promise.resolve({ data: null as EditableProduct | null }),
   ]);
   if (id && !product) notFound();
-  return { categories: categories ?? [], product: product as EditableProduct | null, error: query.error, saved: query.saved };
+  const { data: variants } = id ? await admin.from("product_variants").select("id, name, attributes, sku, price, stock_quantity, is_active").eq("product_id", id).order("created_at") : { data: [] as EditableVariant[] };
+  return { categories: categories ?? [], product: product as EditableProduct | null, variants: (variants ?? []) as EditableVariant[], error: query.error, saved: query.saved, variantError: query.variant_error, variantSaved: query.variant_saved };
 }

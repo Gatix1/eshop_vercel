@@ -73,3 +73,54 @@ export async function toggleProduct(formData: FormData) {
   revalidatePath("/shop");
   revalidatePath("/shop/[slug]", "page");
 }
+
+function readVariant(formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  const sku = String(formData.get("sku") ?? "").trim();
+  const price = Number(formData.get("price"));
+  const stockQuantity = Number(formData.get("stock_quantity"));
+  const attributesText = String(formData.get("attributes") ?? "{}").trim() || "{}";
+  if (!name || name.length > 180 || !sku || sku.length > 80 || !Number.isFinite(price) || price < 0 || !Number.isInteger(stockQuantity) || stockQuantity < 0) {
+    redirect(`/admin/products/${String(formData.get("product_id") ?? "")}?variant_error=Enter%20a%20valid%20variant%20name%2C%20SKU%2C%20price%2C%20and%20stock`);
+  }
+  let attributes: Record<string, string>;
+  try {
+    const parsed: unknown = JSON.parse(attributesText);
+    if (!parsed || Array.isArray(parsed) || typeof parsed !== "object" || Object.values(parsed).some((value) => typeof value !== "string")) throw new Error("Invalid attributes");
+    attributes = parsed as Record<string, string>;
+  } catch {
+    redirect(`/admin/products/${String(formData.get("product_id") ?? "")}?variant_error=Attributes%20must%20be%20a%20JSON%20object%20with%20text%20values`);
+  }
+  return { name, sku, price, stock_quantity: stockQuantity, attributes, is_active: true };
+}
+
+export async function saveVariant(formData: FormData) {
+  await requireProductManager();
+  const productId = String(formData.get("product_id") ?? "").trim();
+  const variantId = String(formData.get("variant_id") ?? "").trim();
+  if (!productId) redirect("/admin/products?error=Product%20not%20found");
+  const variant = readVariant(formData);
+  const admin = createAdminClient();
+  const result = variantId
+    ? await admin.from("product_variants").update(variant).eq("id", variantId).eq("product_id", productId).select("id").maybeSingle()
+    : await admin.from("product_variants").insert({ ...variant, product_id: productId }).select("id").single();
+  if (result.error || !result.data) redirect(`/admin/products/${productId}?variant_error=${encodeURIComponent(result.error?.message ?? "Variant was not saved")}`);
+  revalidatePath(`/admin/products/${productId}`);
+  revalidatePath("/shop");
+  revalidatePath("/shop/[slug]", "page");
+  redirect(`/admin/products/${productId}?variant_saved=1`);
+}
+
+export async function toggleVariant(formData: FormData) {
+  await requireProductManager();
+  const productId = String(formData.get("product_id") ?? "").trim();
+  const variantId = String(formData.get("variant_id") ?? "").trim();
+  const isActive = formData.get("is_active") === "true";
+  if (!productId || !variantId) redirect("/admin/products?error=Variant%20not%20found");
+  const admin = createAdminClient();
+  const { error } = await admin.from("product_variants").update({ is_active: !isActive }).eq("id", variantId).eq("product_id", productId);
+  if (error) redirect(`/admin/products/${productId}?variant_error=${encodeURIComponent(error.message)}`);
+  revalidatePath(`/admin/products/${productId}`);
+  revalidatePath("/shop");
+  revalidatePath("/shop/[slug]", "page");
+}
