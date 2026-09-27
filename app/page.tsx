@@ -3,6 +3,7 @@ import { ArrowDownRight, ArrowUpRight, Cpu, Headphones, Laptop, Monitor, Mouse, 
 import { HomeHeader } from "@/components/home-header";
 import { getCategories, getProducts } from "@/lib/catalog";
 import { ProductCard } from "@/components/product-card";
+import { ScrollReveal } from "@/components/scroll-reveal";
 
 const categoryFallback = [
   { name: "Calculatoare", slug: "calculatoare", icon: Laptop, detail: "Putere pentru fiecare zi" },
@@ -46,19 +47,19 @@ export default async function Home() {
           </div>
         </div>
         <div className="glass-panel hero-float hero-float-top absolute right-0 top-[12%] rounded-2xl px-4 py-3"><p className="text-[9px] uppercase tracking-[0.18em] text-mist">Selecție atentă</p><p className="mt-1 text-sm text-white">Pentru ritmul tău</p></div>
-        <div className="glass-panel hero-float hero-float-bottom absolute bottom-[12%] left-0 rounded-2xl px-4 py-3"><p className="flex items-center gap-2 text-[9px] uppercase tracking-[0.18em] text-mist"><span className="size-1.5 rounded-full bg-acid" /> Chișinău, Moldova</p><p className="mt-1 text-sm text-white">Tehnologie aproape de tine</p></div>
+        <div className="glass-panel hero-float hero-float-bottom absolute bottom-[4%] left-0 rounded-2xl px-4 py-3"><p className="flex items-center gap-2 text-[9px] uppercase tracking-[0.18em] text-mist"><span className="size-1.5 rounded-full bg-acid" /> Chișinău, Moldova</p><p className="mt-1 text-sm text-white">Tehnologie aproape de tine</p></div>
       </div>
     </section>
 
-    <section id="categorii" className="relative px-5 py-16 sm:px-8 lg:px-12">
+    <ScrollReveal><section id="categorii" className="relative mx-auto max-w-[1320px] px-5 py-16 sm:px-8 lg:px-12">
       <div className="mx-auto max-w-[1320px]"><div className="mb-8 flex items-end justify-between gap-5"><div><p className="eyebrow text-[10px] uppercase tracking-[0.22em] text-acid">Explorează după nevoie</p><h2 className="mt-3 font-serif text-4xl text-white sm:text-5xl">Alege direcția.</h2></div><Link href="/shop" className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs text-mist transition hover:border-white/30 hover:text-white sm:inline-flex">Vezi toate <ArrowUpRight size={14} /></Link></div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{categoryItems.map(({ name, slug, icon: Icon, detail }) => <Link href={`/shop?category=${slug}`} key={slug} className="glass-panel category-tile group rounded-[1.4rem] p-5 transition duration-300 hover:-translate-y-1 hover:border-white/25 sm:p-6"><div className="flex items-start justify-between"><span className="grid size-11 place-items-center rounded-2xl border border-white/10 bg-white/[0.055] text-acid"><Icon size={20} strokeWidth={1.5} /></span><ArrowUpRight className="text-white/35 transition group-hover:text-acid" size={17} /></div><p className="mt-10 text-base text-white">{name}</p><p className="mt-1 text-xs text-mist">{detail}</p></Link>)}</div>
       </div>
-    </section>
+    </section></ScrollReveal>
 
-    <section id="shop" className="mx-auto max-w-[1320px] px-5 py-20 sm:px-8 lg:px-12"><div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end"><div><p className="eyebrow text-[10px] uppercase tracking-[0.22em] text-acid">Selecția eShop</p><h2 className="mt-3 font-serif text-4xl text-white sm:text-5xl">Preferatele noastre.</h2><p className="mt-3 max-w-lg text-sm leading-6 text-mist">Produse alese pentru performanță, confort și un setup care ți se potrivește.</p></div><Link href="/shop" className="inline-flex w-fit items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-5 py-3 text-xs text-white transition hover:border-acid/60 hover:text-acid">Vezi catalogul <ArrowUpRight size={15} /></Link></div>
+    <ScrollReveal><section id="shop" className="mx-auto max-w-[1320px] px-5 py-20 sm:px-8 lg:px-12"><div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end"><div><p className="eyebrow text-[10px] uppercase tracking-[0.22em] text-acid">Selecția eShop</p><h2 className="mt-3 font-serif text-4xl text-white sm:text-5xl">Preferatele noastre.</h2><p className="mt-3 max-w-lg text-sm leading-6 text-mist">Produse alese pentru performanță, confort și un setup care ți se potrivește.</p></div><Link href="/shop" className="inline-flex w-fit items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-5 py-3 text-xs text-white transition hover:border-acid/60 hover:text-acid">Vezi catalogul <ArrowUpRight size={15} /></Link></div>
       {featured.length ? <div className="mt-9 grid gap-x-5 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">{featured.map((product) => <ProductCard key={product.id} product={product} />)}</div> : <div className="glass-panel mt-9 flex min-h-56 flex-col justify-center rounded-[1.5rem] p-8 sm:p-10"><p className="text-[10px] uppercase tracking-[0.22em] text-acid">În curând</p><h3 className="mt-3 font-serif text-4xl text-white">Primul tău upgrade începe aici.</h3><p className="mt-3 max-w-lg text-sm leading-6 text-mist">Pregătim o selecție de tehnologie pentru muncă, creație și timpul tău liber.</p></div>}
-    </section>
+    </section></ScrollReveal>
 
     <footer id="despre" className="px-5 pb-8 sm:px-8 lg:px-12"><div className="glass-panel mx-auto flex max-w-[1320px] flex-col justify-between gap-3 rounded-[1.3rem] px-6 py-5 text-[10px] uppercase tracking-[0.17em] text-mist sm:flex-row sm:items-center"><span>e<span className="text-acid">.</span>Shop / Chișinău, Moldova</span><div className="flex flex-wrap gap-x-5 gap-y-2"><Link href="/terms" className="hover:text-white">Termeni</Link><Link href="/privacy" className="hover:text-white">Confidențialitate</Link><Link href="/shipping-returns" className="hover:text-white">Livrare și retur</Link><Link href="/contact" className="hover:text-white">Contact</Link></div></div></footer>
   </main>;
