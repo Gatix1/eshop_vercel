@@ -16,15 +16,15 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "eShop | Hardware, selected carefully",
-  description: "A considered hardware store for the things that power your everyday.",
+  title: "eShop | Tehnologie aleasă cu grijă",
+  description: "Calculatoare, telefoane, componente și accesorii pentru setup-ul tău.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
-  openGraph: { title: "eShop | Hardware, selected carefully", description: "A considered hardware store for the things that power your everyday.", type: "website" },
+  openGraph: { title: "eShop | Tehnologie aleasă cu grijă", description: "Calculatoare, telefoane, componente și accesorii pentru setup-ul tău.", type: "website" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="ro">
       <body className={`${manrope.variable} ${cormorant.variable}`}><CartProvider>{children}</CartProvider></body>
     </html>
   );
