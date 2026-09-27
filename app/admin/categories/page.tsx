@@ -1,0 +1,18 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { toggleCategory } from "@/app/admin/categories/actions";
+
+export default async function AdminCategoriesPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const params = await searchParams;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/auth?next=/admin/categories");
+  const { data: profile } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).single();
+  if (!profile?.is_active || !["owner", "admin", "inventory_manager"].includes(profile.role)) redirect("/admin");
+  const admin = createAdminClient();
+  const { data: categories } = await admin.from("categories").select("id, name, slug, description, is_active, created_at").order("name");
+
+  return <main className="min-h-screen px-5 py-8 sm:px-8 lg:px-12"><header className="mx-auto flex max-w-[1100px] items-center justify-between"><Link href="/admin" className="font-serif text-3xl tracking-[-0.04em] text-white">e<span className="text-acid">.</span>Shop</Link><Link href="/account" className="text-xs uppercase tracking-[0.18em] text-mist hover:text-acid">Account</Link></header><section className="mx-auto max-w-[1100px] py-16"><Link href="/admin" className="text-xs uppercase tracking-[0.18em] text-acid hover:text-white">← Admin workspace</Link><div className="mt-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="text-[10px] uppercase tracking-[0.25em] text-acid">Admin · Catalog</p><h1 className="mt-3 font-serif text-6xl leading-none tracking-[-0.05em] text-white">Categories.</h1></div><Link href="/admin/categories/new" className="inline-flex w-fit bg-acid px-5 py-3 text-xs uppercase tracking-[0.16em] text-ink transition hover:bg-white">Add category</Link></div>{params.error ? <p className="mt-6 border border-red-400/30 px-4 py-3 text-sm text-red-300">{params.error}</p> : null}{categories?.length ? <div className="mt-10 overflow-x-auto border-y border-white/10"><table className="w-full min-w-[680px] text-left text-sm"><thead className="text-[10px] uppercase tracking-[0.16em] text-mist"><tr><th className="py-4 pr-4 font-normal">Name</th><th className="py-4 pr-4 font-normal">Slug</th><th className="py-4 pr-4 font-normal">Description</th><th className="py-4 pr-4 font-normal">Status</th><th className="py-4 font-normal">Actions</th></tr></thead><tbody className="divide-y divide-white/10">{categories.map((category) => <tr key={category.id}><td className="py-4 pr-4 text-white">{category.name}</td><td className="py-4 pr-4 text-xs text-mist">{category.slug}</td><td className="max-w-sm py-4 pr-4 text-xs text-mist">{category.description ?? "No description"}</td><td className="py-4 pr-4"><span className={category.is_active ? "text-acid" : "text-mist"}>{category.is_active ? "Active" : "Inactive"}</span></td><td className="py-4"><div className="flex items-center gap-4"><Link href={`/admin/categories/${category.id}`} className="text-xs text-white underline decoration-white/20 underline-offset-4 hover:text-acid">Edit</Link><form action={toggleCategory}><input type="hidden" name="id" value={category.id} /><input type="hidden" name="is_active" value={String(category.is_active)} /><button className="text-xs text-mist underline decoration-white/20 underline-offset-4 hover:text-acid">{category.is_active ? "Deactivate" : "Activate"}</button></form></div></td></tr>)}</tbody></table></div> : <p className="glass mt-10 p-7 text-sm text-mist">No categories yet. Add one to organize the catalog.</p>}</section></main>;
+}
