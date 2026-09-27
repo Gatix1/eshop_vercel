@@ -18,6 +18,8 @@ const cormorant = Cormorant_Garamond({
 export const metadata: Metadata = {
   title: "eShop | Hardware, selected carefully",
   description: "A considered hardware store for the things that power your everyday.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  openGraph: { title: "eShop | Hardware, selected carefully", description: "A considered hardware store for the things that power your everyday.", type: "website" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

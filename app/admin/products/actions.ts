@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { randomUUID } from "crypto";
+import { logAdminAction, requireStaff } from "@/app/admin/operations";
 
 async function requireProductManager() {
   const supabase = await createClient();
@@ -73,6 +74,24 @@ export async function toggleProduct(formData: FormData) {
   revalidatePath("/admin/products");
   revalidatePath("/shop");
   revalidatePath("/shop/[slug]", "page");
+}
+
+export async function adjustProductStock(formData: FormData) {
+  const { user, admin } = await requireStaff(["owner", "admin", "inventory_manager"], "/admin/products");
+  const productId = String(formData.get("product_id") ?? "").trim();
+  const delta = Number(formData.get("quantity_delta"));
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!productId || !Number.isInteger(delta) || delta === 0 || !reason || reason.length > 240) redirect(`/admin/products/${productId}?stock_error=Enter%20a%20whole%20number%20and%20reason`);
+  const { data: product } = await admin.from("products").select("id, slug, stock_quantity").eq("id", productId).maybeSingle();
+  if (!product || product.stock_quantity + delta < 0) redirect(`/admin/products/${productId}?stock_error=Stock%20cannot%20be%20negative`);
+  const { error } = await admin.from("products").update({ stock_quantity: product.stock_quantity + delta }).eq("id", productId).eq("stock_quantity", product.stock_quantity);
+  if (error) redirect(`/admin/products/${productId}?stock_error=${encodeURIComponent(error.message)}`);
+  await admin.from("inventory_adjustments").insert({ product_id: productId, quantity_delta: delta, previous_quantity: product.stock_quantity, new_quantity: product.stock_quantity + delta, reason, admin_user_id: user.id });
+  await logAdminAction(admin, user.id, "adjust_stock", "product", productId, { delta, reason });
+  revalidatePath(`/admin/products/${productId}`);
+  revalidatePath("/admin/products");
+  revalidatePath(`/shop/${product.slug}`);
+  redirect(`/admin/products/${productId}?stock_saved=1`);
 }
 
 function readVariant(formData: FormData) {

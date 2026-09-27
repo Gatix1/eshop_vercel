@@ -6,7 +6,7 @@ import type { EditableProduct } from "@/app/admin/products/product-editor";
 export type EditableVariant = { id: string; name: string; attributes: Record<string, string>; sku: string; price: number; stock_quantity: number; is_active: boolean };
 export type EditableImage = { id: string; storage_path: string; alt_text: string | null; sort_order: number };
 
-export async function loadProductForm(id: string | undefined, searchParams: Promise<{ error?: string; saved?: string; variant_error?: string; variant_saved?: string; image_error?: string; image_saved?: string }>) {
+export async function loadProductForm(id: string | undefined, searchParams: Promise<{ error?: string; saved?: string; variant_error?: string; variant_saved?: string; image_error?: string; image_saved?: string; stock_error?: string; stock_saved?: string }>) {
   const query = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

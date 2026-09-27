@@ -1,0 +1,5 @@
+import Link from "next/link";
+
+export function LegalPage({ title, intro, sections }: { title: string; intro: string; sections: { heading: string; body: string }[] }) {
+  return <main className="min-h-screen px-5 py-8 sm:px-8 lg:px-12"><header className="mx-auto flex max-w-[900px] items-center justify-between"><Link href="/" className="font-serif text-3xl text-white">e<span className="text-acid">.</span>Shop</Link><Link href="/shop" className="text-xs uppercase tracking-[0.18em] text-mist hover:text-acid">Shop</Link></header><article className="mx-auto max-w-[900px] py-20"><p className="text-[10px] uppercase tracking-[0.25em] text-acid">eShop information</p><h1 className="mt-4 font-serif text-6xl leading-none text-white">{title}</h1><p className="mt-6 max-w-2xl text-sm leading-7 text-mist">{intro}</p><div className="mt-14 space-y-10">{sections.map((section) => <section key={section.heading}><h2 className="font-serif text-3xl text-white">{section.heading}</h2><p className="mt-3 max-w-2xl whitespace-pre-line text-sm leading-7 text-mist">{section.body}</p></section>)}</div></article></main>;
+}

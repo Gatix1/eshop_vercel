@@ -1,0 +1,2 @@
+import { LegalPage } from "@/app/legal/legal-page";
+export default function ContactPage() { return <LegalPage title="Contact eShop." intro="For order, product, payment, or delivery questions, contact the store team." sections={[{ heading: "Customer support", body: "Email: support@example.com\nPhone: +373 00 000 000\nSupport hours: Monday to Friday, 09:00 to 18:00 EET" }, { heading: "Order support", body: "Include your order reference when asking about a paid order." }]} />; }
