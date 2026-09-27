@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { randomUUID } from "crypto";
 
 async function requireProductManager() {
   const supabase = await createClient();
@@ -123,4 +124,69 @@ export async function toggleVariant(formData: FormData) {
   revalidatePath(`/admin/products/${productId}`);
   revalidatePath("/shop");
   revalidatePath("/shop/[slug]", "page");
+}
+
+function imageRedirect(productId: string, key: string, value: string) {
+  redirect(`/admin/products/${productId}?${key}=${encodeURIComponent(value)}`);
+}
+
+async function requireProductImageManager(productId: string) {
+  await requireProductManager();
+  const admin = createAdminClient();
+  const { data: product } = await admin.from("products").select("id, slug").eq("id", productId).maybeSingle();
+  if (!product) redirect("/admin/products?error=Product%20not%20found");
+  return { admin, product };
+}
+
+export async function uploadProductImage(formData: FormData) {
+  const productId = String(formData.get("product_id") ?? "").trim();
+  const { admin, product } = await requireProductImageManager(productId);
+  const file = formData.get("image");
+  const altText = String(formData.get("alt_text") ?? "").trim();
+  if (!(file instanceof File) || file.size === 0) imageRedirect(productId, "image_error", "Choose an image file");
+  if (!(file instanceof File)) return;
+  const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+  if (!allowedTypes.has(file.type)) imageRedirect(productId, "image_error", "Use a JPG, PNG, WebP, or GIF image");
+  if (file.size > 10 * 1024 * 1024) imageRedirect(productId, "image_error", "Images must be 10 MB or smaller");
+  const extension = file.name.split(".").pop()?.toLowerCase() || "bin";
+  const storagePath = `${productId}/${randomUUID()}.${extension}`;
+  const upload = await admin.storage.from("product-images").upload(storagePath, file, { contentType: file.type, upsert: false });
+  if (upload.error) imageRedirect(productId, "image_error", upload.error.message);
+  const { count } = await admin.from("product_images").select("id", { count: "exact", head: true }).eq("product_id", productId);
+  const { error } = await admin.from("product_images").insert({ product_id: productId, storage_path: storagePath, alt_text: altText || product.slug, sort_order: count ?? 0 });
+  if (error) {
+    await admin.storage.from("product-images").remove([storagePath]);
+    imageRedirect(productId, "image_error", error.message);
+  }
+  revalidatePath(`/admin/products/${productId}`);
+  revalidatePath(`/shop/${product.slug}`);
+  redirect(`/admin/products/${productId}?image_saved=1`);
+}
+
+export async function deleteProductImage(formData: FormData) {
+  const productId = String(formData.get("product_id") ?? "").trim();
+  const imageId = String(formData.get("image_id") ?? "").trim();
+  const { admin, product } = await requireProductImageManager(productId);
+  const { data: image } = await admin.from("product_images").select("id, storage_path").eq("id", imageId).eq("product_id", productId).maybeSingle();
+  if (!image) imageRedirect(productId, "image_error", "Image not found");
+  if (!image) return;
+  const { error } = await admin.from("product_images").delete().eq("id", imageId).eq("product_id", productId);
+  if (error) imageRedirect(productId, "image_error", error.message);
+  await admin.storage.from("product-images").remove([image.storage_path]);
+  revalidatePath(`/admin/products/${productId}`);
+  revalidatePath(`/shop/${product.slug}`);
+}
+
+export async function setMainProductImage(formData: FormData) {
+  const productId = String(formData.get("product_id") ?? "").trim();
+  const imageId = String(formData.get("image_id") ?? "").trim();
+  const { admin, product } = await requireProductImageManager(productId);
+  const { data: images } = await admin.from("product_images").select("id, storage_path, sort_order").eq("product_id", productId).order("sort_order").order("created_at");
+  if (!images?.some((image) => image.id === imageId)) imageRedirect(productId, "image_error", "Image not found");
+  for (const image of images ?? []) {
+    const sortOrder = image.id === imageId ? 0 : image.sort_order === 0 ? 1 : image.sort_order;
+    if (sortOrder !== image.sort_order) await admin.from("product_images").update({ sort_order: sortOrder }).eq("id", image.id);
+  }
+  revalidatePath(`/admin/products/${productId}`);
+  revalidatePath(`/shop/${product.slug}`);
 }

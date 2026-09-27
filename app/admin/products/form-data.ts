@@ -4,8 +4,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { EditableProduct } from "@/app/admin/products/product-editor";
 
 export type EditableVariant = { id: string; name: string; attributes: Record<string, string>; sku: string; price: number; stock_quantity: number; is_active: boolean };
+export type EditableImage = { id: string; storage_path: string; alt_text: string | null; sort_order: number };
 
-export async function loadProductForm(id: string | undefined, searchParams: Promise<{ error?: string; saved?: string; variant_error?: string; variant_saved?: string }>) {
+export async function loadProductForm(id: string | undefined, searchParams: Promise<{ error?: string; saved?: string; variant_error?: string; variant_saved?: string; image_error?: string; image_saved?: string }>) {
   const query = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -19,5 +20,6 @@ export async function loadProductForm(id: string | undefined, searchParams: Prom
   ]);
   if (id && !product) notFound();
   const { data: variants } = id ? await admin.from("product_variants").select("id, name, attributes, sku, price, stock_quantity, is_active").eq("product_id", id).order("created_at") : { data: [] as EditableVariant[] };
-  return { categories: categories ?? [], product: product as EditableProduct | null, variants: (variants ?? []) as EditableVariant[], error: query.error, saved: query.saved, variantError: query.variant_error, variantSaved: query.variant_saved };
+  const { data: images } = id ? await admin.from("product_images").select("id, storage_path, alt_text, sort_order").eq("product_id", id).order("sort_order").order("created_at") : { data: [] as EditableImage[] };
+  return { categories: categories ?? [], product: product as EditableProduct | null, variants: (variants ?? []) as EditableVariant[], images: (images ?? []) as EditableImage[], error: query.error, saved: query.saved, variantError: query.variant_error, variantSaved: query.variant_saved, imageError: query.image_error, imageSaved: query.image_saved };
 }
