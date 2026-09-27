@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, paypal_order_id, payment_status, total")
+    .select("id, paypal_order_id, payment_status, total, expires_at")
     .eq("id", orderId)
     .eq("customer_id", user.id)
     .maybeSingle();
@@ -26,6 +26,9 @@ export async function GET(request: Request) {
   }
   if (order.payment_status === "paid") {
     return NextResponse.redirect(new URL(`/checkout/success?order=${orderId}`, url.origin));
+  }
+  if (order.payment_status === "expired" || (order.expires_at && new Date(order.expires_at).getTime() <= Date.now())) {
+    return NextResponse.redirect(new URL("/account?payment=expired", url.origin));
   }
 
   try {
@@ -43,6 +46,9 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(`/checkout/success?order=${orderId}`, url.origin));
   } catch (error) {
     console.error("PayPal capture failed", error);
+    if (error instanceof Error && /expired|payment window/i.test(error.message)) {
+      return NextResponse.redirect(new URL("/account?payment=expired", url.origin));
+    }
     return NextResponse.redirect(new URL(`/account?payment=pending&order=${orderId}`, url.origin));
   }
 }
