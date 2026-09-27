@@ -133,7 +133,7 @@ function imageRedirect(productId: string, key: string, value: string) {
 async function requireProductImageManager(productId: string) {
   await requireProductManager();
   const admin = createAdminClient();
-  const { data: product } = await admin.from("products").select("id, slug").eq("id", productId).maybeSingle();
+  const { data: product } = await admin.from("products").select("id, slug, main_image").eq("id", productId).maybeSingle();
   if (!product) redirect("/admin/products?error=Product%20not%20found");
   return { admin, product };
 }
@@ -158,6 +158,9 @@ export async function uploadProductImage(formData: FormData) {
     await admin.storage.from("product-images").remove([storagePath]);
     imageRedirect(productId, "image_error", error.message);
   }
+  if (!product.main_image) {
+    await admin.from("products").update({ main_image: storagePath }).eq("id", productId);
+  }
   revalidatePath(`/admin/products/${productId}`);
   revalidatePath(`/shop/${product.slug}`);
   redirect(`/admin/products/${productId}?image_saved=1`);
@@ -173,6 +176,10 @@ export async function deleteProductImage(formData: FormData) {
   const { error } = await admin.from("product_images").delete().eq("id", imageId).eq("product_id", productId);
   if (error) imageRedirect(productId, "image_error", error.message);
   await admin.storage.from("product-images").remove([image.storage_path]);
+  if (product.main_image === image.storage_path) {
+    const { data: replacement } = await admin.from("product_images").select("storage_path").eq("product_id", productId).order("sort_order").order("created_at").limit(1).maybeSingle();
+    await admin.from("products").update({ main_image: replacement?.storage_path ?? null }).eq("id", productId);
+  }
   revalidatePath(`/admin/products/${productId}`);
   revalidatePath(`/shop/${product.slug}`);
 }
@@ -187,6 +194,8 @@ export async function setMainProductImage(formData: FormData) {
     const sortOrder = image.id === imageId ? 0 : image.sort_order === 0 ? 1 : image.sort_order;
     if (sortOrder !== image.sort_order) await admin.from("product_images").update({ sort_order: sortOrder }).eq("id", image.id);
   }
+  const mainImage = images?.find((image) => image.id === imageId);
+  if (mainImage) await admin.from("products").update({ main_image: mainImage.storage_path }).eq("id", productId);
   revalidatePath(`/admin/products/${productId}`);
   revalidatePath(`/shop/${product.slug}`);
 }
